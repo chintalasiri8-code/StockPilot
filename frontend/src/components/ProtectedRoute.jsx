@@ -15,14 +15,18 @@ export const ProtectedRoute = ({ children }) => {
     );
   }
 
+  // ✅ Not logged in → go to login
   if (!token) {
     return <Navigate to="/login" replace />;
   }
 
-  if (user && user.role !== 'user') {
+  // ✅ IMPORTANT FIX:
+  // Only block if user exists AND role is explicitly wrong
+  if (user && user.role && user.role !== 'user') {
     return <Navigate to="/access-denied" replace />;
   }
 
+  // ✅ Allow if user is still loading but token exists
   return children;
 };
 
@@ -39,11 +43,13 @@ export const AdminRoute = ({ children }) => {
     );
   }
 
+  // Not logged in → login
   if (!token) {
     return <Navigate to="/login" replace />;
   }
 
-  if (user && user.role !== 'admin') {
+  // ✅ Only restrict if role is confirmed and not admin
+  if (user && user.role && user.role !== 'admin') {
     return <Navigate to="/access-denied" replace />;
   }
 
