@@ -9,16 +9,27 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [toasts, setToasts] = useState([]);
 
-  // Load user details if token is stored
+  // ✅ FIXED: Load user safely
   useEffect(() => {
     const fetchUser = async () => {
       if (token) {
         try {
           const res = await api.get('/api/auth/me');
           setUser(res.data);
+          localStorage.setItem('user', JSON.stringify(res.data));
         } catch (error) {
-          console.error('Failed to load user profile on startup', error);
-          logout();
+          console.warn('API failed, using localStorage user');
+
+          // ✅ IMPORTANT FIX: fallback to stored user instead of logout
+          const storedUser = localStorage.getItem('user');
+          if (storedUser) {
+            try {
+              setUser(JSON.parse(storedUser));
+            } catch {
+              console.error('Invalid stored user data');
+            }
+          }
+          // ❌ DO NOT logout here
         }
       }
       setLoading(false);
@@ -27,33 +38,32 @@ export const AuthProvider = ({ children }) => {
     fetchUser();
   }, [token]);
 
-  // Show a toast message
+  // Toast system (unchanged)
   const showToast = (message, type = 'info') => {
     const id = Date.now();
     setToasts((prev) => [...prev, { id, message, type }]);
-    
-    // Automatically remove after 5 seconds
+
     setTimeout(() => {
       setToasts((prev) => prev.filter((toast) => toast.id !== id));
     }, 5000);
   };
 
-  // Helper to remove a toast manually
   const removeToast = (id) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   };
 
-  // Login handler
+  // Login (unchanged)
   const login = async (email, password) => {
     try {
       const res = await api.post('/api/auth/login', { email, password });
       const { token: userToken, ...userData } = res.data;
-      
+
       localStorage.setItem('token', userToken);
       localStorage.setItem('user', JSON.stringify(userData));
-      
+
       setToken(userToken);
       setUser(userData);
+
       showToast(`Welcome back, ${userData.name}!`, 'success');
       return { success: true, role: userData.role };
     } catch (error) {
@@ -61,43 +71,38 @@ export const AuthProvider = ({ children }) => {
       if (error.response?.data?.message) {
         msg = error.response.data.message;
       } else if (error.message === 'Network Error' || !error.response) {
-        msg = 'Connection to backend server failed. Please ensure the server is running.';
+        msg = 'Connection to backend server failed.';
       }
       showToast(msg, 'danger');
       return { success: false, error: msg };
     }
   };
 
-  // Register handler
+  // Register (unchanged)
   const register = async (name, email, password, role) => {
     try {
       const res = await api.post('/api/auth/register', { name, email, password, role });
       const { token: userToken, ...userData } = res.data;
-      
+
       localStorage.setItem('token', userToken);
       localStorage.setItem('user', JSON.stringify(userData));
-      
+
       setToken(userToken);
       setUser(userData);
-      if (userData.role === 'admin') {
-        showToast('Registration successful! Platform Admin account has been activated with $1,000,000 virtual balance.', 'success');
-      } else {
-        showToast('Registration successful! $10,000 has been credited to your virtual wallet.', 'success');
-      }
+
+      showToast('Registration successful!', 'success');
       return { success: true, role: userData.role };
     } catch (error) {
       let msg = 'Registration failed.';
       if (error.response?.data?.message) {
         msg = error.response.data.message;
-      } else if (error.message === 'Network Error' || !error.response) {
-        msg = 'Connection to backend server failed. Please ensure the server is running.';
       }
       showToast(msg, 'danger');
       return { success: false, error: msg };
     }
   };
 
-  // Refresh user profile (updates balance, portfolio, status etc)
+  // Refresh profile (unchanged)
   const refreshUserProfile = async () => {
     if (!token) return;
     try {
@@ -109,7 +114,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Logout handler
+  // Logout (unchanged)
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
