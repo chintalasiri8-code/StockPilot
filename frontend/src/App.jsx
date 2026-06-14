@@ -27,7 +27,7 @@ import AdminTransactions from './pages/AdminTransactions';
 
 // Main Layout Wrapper
 const AppLayout = () => {
-  const { token, loading } = useAuth();
+  const { loading } = useAuth();
 
   if (loading) {
     return (
@@ -39,7 +39,6 @@ const AppLayout = () => {
     );
   }
 
-  // If unauthenticated, Router handles redirection. If authenticated, render layout
   return (
     <div className="d-flex flex-column min-vh-100" style={{ backgroundColor: 'var(--bg-primary)' }}>
       <Navbar />
@@ -47,8 +46,12 @@ const AppLayout = () => {
         <Sidebar />
         <main className="flex-grow-1 overflow-auto" style={{ minHeight: 'calc(100vh - 73px)' }}>
           <Routes>
+
+            {/* ✅ FIX: Redirect root to login */}
+            <Route path="/" element={<Navigate to="/login" replace />} />
+
             {/* User Protected Routes */}
-            <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/stocks" element={<ProtectedRoute><StockDashboard /></ProtectedRoute>} />
             <Route path="/portfolio" element={<ProtectedRoute><Portfolio /></ProtectedRoute>} />
             <Route path="/transactions" element={<ProtectedRoute><Transactions /></ProtectedRoute>} />
@@ -61,8 +64,8 @@ const AppLayout = () => {
             <Route path="/admin/stocks" element={<AdminRoute><AdminStocks /></AdminRoute>} />
             <Route path="/admin/transactions" element={<AdminRoute><AdminTransactions /></AdminRoute>} />
 
-            {/* General Fallback */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </main>
       </div>
@@ -70,22 +73,23 @@ const AppLayout = () => {
   );
 };
 
-// Top-level App Component containing Provider
+// Top-level App Component
 function App() {
   return (
     <Router>
       <AuthProvider>
         <Routes>
-          {/* Auth Pages (Unprotected - Rendered without sidebar/navbar) */}
+
+          {/* Public Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/access-denied" element={<AccessDenied />} />
-          
-          {/* Layout Pages */}
+
+          {/* App Layout */}
           <Route path="/*" element={<AppLayout />} />
+
         </Routes>
-        
-        {/* Global Alert Toast Notifications */}
+
         <ToastNotification />
       </AuthProvider>
     </Router>
