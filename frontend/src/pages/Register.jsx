@@ -8,9 +8,20 @@ const Register = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('user');
+  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { register, showToast } = useAuth();
+  const { register, showToast, token, user } = useAuth();
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    if (token && user) {
+      if (user.role === 'admin') {
+        navigate('/admin', { replace: true });
+      } else {
+        navigate('/dashboard', { replace: true });
+      }
+    }
+  }, [token, user, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -29,7 +40,7 @@ const Register = () => {
       if (result.role === 'admin') {
         navigate('/admin');
       } else {
-        navigate('/');
+        navigate('/dashboard');
       }
     }
   };
@@ -79,28 +90,46 @@ const Register = () => {
 
               <div className="mb-3">
                 <label className="form-label text-muted small fw-semibold">Account Role</label>
-                <select
-                  className="form-select form-control-custom text-white"
-                  style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  required
-                >
-                  <option value="user" style={{ color: '#000000' }}>USER</option>
-                  <option value="admin" style={{ color: '#000000' }}>ADMIN</option>
-                </select>
+                <div className="d-flex p-1.5 rounded-3" style={{ backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-color)' }}>
+                  <button
+                    type="button"
+                    className={`btn w-50 py-2 border-0 fw-bold transition-all ${role === 'user' ? 'btn-primary-custom' : 'text-muted'}`}
+                    onClick={() => setRole('user')}
+                    style={{ borderRadius: '8px' }}
+                  >
+                    <i className="bi bi-person-fill me-1"></i> User
+                  </button>
+                  <button
+                    type="button"
+                    className={`btn w-50 py-2 border-0 fw-bold transition-all ${role === 'admin' ? 'btn-warning-custom' : 'text-muted'}`}
+                    onClick={() => setRole('admin')}
+                    style={{ borderRadius: '8px' }}
+                  >
+                    <i className="bi bi-shield-lock-fill me-1"></i> Admin
+                  </button>
+                </div>
               </div>
 
               <div className="mb-4">
                 <label className="form-label text-muted small fw-semibold">Password</label>
-                <input
-                  type="password"
-                  className="form-control form-control-custom"
-                  placeholder="Min. 6 characters"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
+                <div className="position-relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    className="form-control form-control-custom pe-5"
+                    placeholder="Min. 6 characters"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-link text-muted position-absolute end-0 top-50 translate-middle-y me-3 p-0 border-0"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{ zIndex: 10, textDecoration: 'none' }}
+                  >
+                    <i className={`bi ${showPassword ? 'bi-eye-slash' : 'bi-eye'} fs-5`}></i>
+                  </button>
+                </div>
               </div>
 
               <button

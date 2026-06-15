@@ -25,13 +25,26 @@ import AdminUsers from './pages/AdminUsers';
 import AdminStocks from './pages/AdminStocks';
 import AdminTransactions from './pages/AdminTransactions';
 
+// Component to handle dynamic redirection from root '/'
+const RootRedirect = () => {
+  const { token, user } = useAuth();
+  if (!token || !user) {
+    return <Navigate to="/login" replace />;
+  }
+  return user.role === 'admin' ? (
+    <Navigate to="/admin" replace />
+  ) : (
+    <Navigate to="/dashboard" replace />
+  );
+};
+
 // Main Layout Wrapper
 const AppLayout = () => {
   const { loading } = useAuth();
 
   if (loading) {
     return (
-      <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh', backgroundColor: '#090a0f' }}>
+      <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)' }}>
         <div className="spinner-border text-primary" role="status">
           <span className="visually-hidden">Loading StockPilot...</span>
         </div>
@@ -47,8 +60,8 @@ const AppLayout = () => {
         <main className="flex-grow-1 overflow-auto" style={{ minHeight: 'calc(100vh - 73px)' }}>
           <Routes>
 
-            {/* ✅ FIX: Redirect root to login */}
-            <Route path="/" element={<Navigate to="/login" replace />} />
+            {/* Redirect root based on login status */}
+            <Route path="/" element={<RootRedirect />} />
 
             {/* User Protected Routes */}
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
@@ -65,7 +78,7 @@ const AppLayout = () => {
             <Route path="/admin/transactions" element={<AdminRoute><AdminTransactions /></AdminRoute>} />
 
             {/* Fallback */}
-            <Route path="*" element={<Navigate to="/login" replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
       </div>

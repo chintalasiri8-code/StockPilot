@@ -9,13 +9,21 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { login } = useAuth();
+  const { login, token, user, logout, showToast } = useAuth();
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    if (token && user) {
+      if (user.role === 'admin') {
+        navigate('/admin', { replace: true });
+      } else {
+        navigate('/dashboard', { replace: true });
+      }
+    }
+  }, [token, user, navigate]);
 
   const handleRoleChange = (newRole) => {
     setRole(newRole);
-    setEmail('');
-    setPassword('');
   };
 
   const handleSubmit = async (e) => {
@@ -27,10 +35,14 @@ const Login = () => {
     setIsSubmitting(false);
 
     if (result.success) {
+      if (role === 'admin' && result.role !== 'admin') {
+        logout('Access denied: Admin privileges required.');
+        return;
+      }
       if (result.role === 'admin') {
         navigate('/admin');
       } else {
-        navigate('/');
+        navigate('/dashboard');
       }
     }
   };
@@ -56,7 +68,7 @@ const Login = () => {
             <div className="d-flex mb-4 p-1.5 rounded-3" style={{ backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-color)' }}>
               <button
                 type="button"
-                className={`btn w-50 py-2 border-0 fw-bold transition-all ${role === 'user' ? 'btn-primary-custom text-white' : 'text-muted'}`}
+                className={`btn w-50 py-2 border-0 fw-bold transition-all ${role === 'user' ? 'btn-primary-custom' : 'text-muted'}`}
                 onClick={() => handleRoleChange('user')}
                 style={{ borderRadius: '8px' }}
               >
@@ -64,7 +76,7 @@ const Login = () => {
               </button>
               <button
                 type="button"
-                className={`btn w-50 py-2 border-0 fw-bold transition-all ${role === 'admin' ? 'btn-warning-custom text-white' : 'text-muted'}`}
+                className={`btn w-50 py-2 border-0 fw-bold transition-all ${role === 'admin' ? 'btn-warning-custom' : 'text-muted'}`}
                 onClick={() => handleRoleChange('admin')}
                 style={{ borderRadius: '8px' }}
               >

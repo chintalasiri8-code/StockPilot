@@ -1,8 +1,17 @@
 import axios from 'axios';
 
-// Create custom axios instance
+const normalizeBaseURL = (value) => {
+  if (!value || typeof value !== 'string') {
+    return '';
+  }
+
+  const trimmed = value.trim().replace(/\/+$/, '');
+  return trimmed.endsWith('/api') ? trimmed.slice(0, -4) : trimmed;
+};
+
+const rawBaseURL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_URI || '';
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000',
+  baseURL: normalizeBaseURL(rawBaseURL),
   headers: {
     'Content-Type': 'application/json'
   }
