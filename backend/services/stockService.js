@@ -5,6 +5,22 @@ const Stock = require('../models/Stock');
 const cache = new Map();
 const CACHE_EXPIRY_MS = 10000; // 10 seconds cache duration
 
+const FALLBACK_STOCKS = [
+  { symbol: 'AAPL', name: 'Apple Inc.', sector: 'Technology' },
+  { symbol: 'TSLA', name: 'Tesla, Inc.', sector: 'Consumer Cyclical' },
+  { symbol: 'MSFT', name: 'Microsoft Corporation', sector: 'Technology' }
+];
+
+const getApiKey = () => process.env.FINNHUB_API_KEY || process.env.STOCK_API_KEY;
+
+const getFallbackMeta = (symbol) => {
+  return FALLBACK_STOCKS.find((stock) => stock.symbol === symbol) || {
+    symbol,
+    name: symbol,
+    sector: 'Market'
+  };
+};
+
 /**
  * Fetch near real-time stock price data for a symbol.
  * Uses an external API if key is present; otherwise falls back to local DB/simulated data.
@@ -22,8 +38,8 @@ const getStockData = async (symbol) => {
   }
 
   let data = null;
-  const apiKey = process.env.STOCK_API_KEY;
-  const provider = process.env.STOCK_API_PROVIDER || 'finnhub';
+  const apiKey = getApiKey();
+  const provider = process.env.FINNHUB_API_KEY ? 'finnhub' : (process.env.STOCK_API_PROVIDER || 'finnhub');
 
   // 2. Fetch from External API if key is configured
   if (apiKey && apiKey.trim() !== '') {
@@ -42,10 +58,17 @@ const getStockData = async (symbol) => {
         // Finnhub returns c: 0 (current price) if the symbol is not found or invalid
         if (quote && quote.c !== undefined && quote.c !== 0) {
           data = {
+            _id: upperSymbol,
             symbol: upperSymbol,
+            name: getFallbackMeta(upperSymbol).name,
+            sector: getFallbackMeta(upperSymbol).sector,
             price: Number(quote.c.toFixed(2)),
+            previousPrice: Number((quote.pc || quote.c).toFixed(2)),
             change: Number((quote.d || 0).toFixed(2)),
             changePercent: Number((quote.dp || 0).toFixed(2)),
+            isSuspended: false,
+            volume: 0,
+            marketCap: 0,
             lastUpdated: new Date().toISOString()
           };
         } else {
@@ -68,10 +91,17 @@ const getStockData = async (symbol) => {
           const change = parseFloat(quote['09. change'] || '0');
           const changePercent = parseFloat((quote['10. change percent'] || '0%').replace('%', ''));
           data = {
+            _id: upperSymbol,
             symbol: upperSymbol,
+            name: getFallbackMeta(upperSymbol).name,
+            sector: getFallbackMeta(upperSymbol).sector,
             price: Number(price.toFixed(2)),
+            previousPrice: Number((price - change).toFixed(2)),
             change: Number(change.toFixed(2)),
             changePercent: Number(changePercent.toFixed(2)),
+            isSuspended: false,
+            volume: 0,
+            marketCap: 0,
             lastUpdated: new Date().toISOString()
           };
         } else {
@@ -90,10 +120,17 @@ const getStockData = async (symbol) => {
     const localStock = await Stock.findOne({ symbol: upperSymbol });
     if (localStock) {
       data = {
+        _id: localStock._id,
         symbol: localStock.symbol,
+        name: localStock.name,
+        sector: localStock.sector,
         price: localStock.price,
+        previousPrice: localStock.previousPrice,
         change: localStock.change,
         changePercent: localStock.changePercent,
+        isSuspended: localStock.isSuspended,
+        volume: localStock.volume,
+        marketCap: localStock.marketCap,
         lastUpdated: localStock.updatedAt ? localStock.updatedAt.toISOString() : new Date().toISOString()
       };
     } else {
@@ -109,10 +146,17 @@ const getStockData = async (symbol) => {
       const changePercentRange = Number((changeRange / (basePrice / 100)).toFixed(2));
       
       data = {
+        _id: upperSymbol,
         symbol: upperSymbol,
+        name: getFallbackMeta(upperSymbol).name,
+        sector: getFallbackMeta(upperSymbol).sector,
         price: Number(basePrice.toFixed(2)),
+        previousPrice: Number((basePrice - changeRange).toFixed(2)),
         change: Number(changeRange.toFixed(2)),
         changePercent: changePercentRange,
+        isSuspended: false,
+        volume: 0,
+        marketCap: 0,
         lastUpdated: new Date().toISOString()
       };
     }
@@ -128,5 +172,7 @@ const getStockData = async (symbol) => {
 };
 
 module.exports = {
-  getStockData
+  FALLBACK_STOCKS,
+  getStockData,
+  getApiKey
 };

@@ -9,7 +9,9 @@ const normalizeBaseURL = (value) => {
   return trimmed.endsWith('/api') ? trimmed.slice(0, -4) : trimmed;
 };
 
-const rawBaseURL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_URI || '';
+const rawBaseURL = import.meta.env.DEV
+  ? ''
+  : import.meta.env.VITE_API_URL || import.meta.env.VITE_API_URI || '';
 const api = axios.create({
   baseURL: normalizeBaseURL(rawBaseURL),
   headers: {

@@ -1,6 +1,7 @@
 const Stock = require('../models/Stock');
 const StockHistory = require('../models/StockHistory');
 const stockService = require('../services/stockService');
+const mongoose = require('mongoose');
 
 // @desc    Get all stocks
 // @route   GET /api/stocks
@@ -30,7 +31,16 @@ const getStocks = async (req, res) => {
       : {};
 
     const stocks = await Stock.find({ ...search }).sort({ symbol: 1 });
-    res.json(stocks);
+
+    if (stocks.length > 0 || req.query.search) {
+      return res.json(stocks);
+    }
+
+    const fallbackStocks = await Promise.all(
+      stockService.FALLBACK_STOCKS.map((stock) => stockService.getStockData(stock.symbol))
+    );
+
+    return res.json(fallbackStocks);
   } catch (error) {
     return res.status(500).json({ message: 'Server error fetching stocks' });
   }
@@ -41,10 +51,16 @@ const getStocks = async (req, res) => {
 // @access  Public/Private
 const getStockById = async (req, res) => {
   try {
-    const stock = await Stock.findById(req.params.id);
+    const stock = mongoose.Types.ObjectId.isValid(req.params.id)
+      ? await Stock.findById(req.params.id)
+      : await Stock.findOne({ symbol: req.params.id.toUpperCase() });
 
     if (!stock) {
-      return res.status(404).json({ message: 'Stock not found' });
+      const liveData = await stockService.getStockData(req.params.id);
+      return res.json({
+        stock: liveData,
+        priceHistory: []
+      });
     }
 
     // Get stock history

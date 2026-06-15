@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const Stock = require('../models/Stock');
 const Transaction = require('../models/Transaction');
+const mongoose = require('mongoose');
 
 // @desc    Buy shares of a stock
 // @route   POST /api/trades/buy
@@ -29,7 +30,9 @@ const buyStock = async (req, res) => {
     }
 
     // 3. Fetch Stock & check suspension status (cannot trade suspended stocks)
-    const stock = await Stock.findById(stockId);
+    const stock = mongoose.Types.ObjectId.isValid(stockId)
+      ? await Stock.findById(stockId)
+      : await Stock.findOne({ symbol: stockId.toUpperCase() });
     if (!stock) {
       res.status(404);
       throw new Error('Stock not found');
@@ -52,7 +55,7 @@ const buyStock = async (req, res) => {
 
     // Find stock in user's portfolio
     const portfolioIndex = user.portfolio.findIndex(
-      (item) => item.stock.toString() === stockId.toString()
+      (item) => item.stock.toString() === stock._id.toString()
     );
 
     if (portfolioIndex > -1) {
@@ -133,7 +136,9 @@ const sellStock = async (req, res) => {
     }
 
     // 3. Fetch Stock & check suspension status (cannot trade suspended stocks)
-    const stock = await Stock.findById(stockId);
+    const stock = mongoose.Types.ObjectId.isValid(stockId)
+      ? await Stock.findById(stockId)
+      : await Stock.findOne({ symbol: stockId.toUpperCase() });
     if (!stock) {
       res.status(404);
       throw new Error('Stock not found');
@@ -146,7 +151,7 @@ const sellStock = async (req, res) => {
 
     // 4. Portfolio ownership validation (cannot sell more than owned)
     const portfolioIndex = user.portfolio.findIndex(
-      (item) => item.stock.toString() === stockId.toString()
+      (item) => item.stock.toString() === stock._id.toString()
     );
 
     if (portfolioIndex === -1) {

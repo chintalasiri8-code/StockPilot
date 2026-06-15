@@ -1,18 +1,42 @@
 const Stock = require('./models/Stock');
 const StockHistory = require('./models/StockHistory');
 const axios = require('axios');
+const stockService = require('./services/stockService');
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const runMarketSimulation = async () => {
   try {
-    const stocks = await Stock.find({});
+    let stocks = await Stock.find({});
     if (stocks.length === 0) {
-      console.log('No stocks found in database to simulate.');
-      return;
+      console.log('[Market Simulator] No stocks found. Creating fallback stock list.');
+      const fallbackStocks = await Promise.all(
+        stockService.FALLBACK_STOCKS.map((stock) => stockService.getStockData(stock.symbol))
+      );
+
+      for (const stock of fallbackStocks) {
+        await Stock.findOneAndUpdate(
+          { symbol: stock.symbol },
+          {
+            symbol: stock.symbol,
+            name: stock.name,
+            sector: stock.sector,
+            price: stock.price,
+            previousPrice: stock.previousPrice || stock.price,
+            change: stock.change || 0,
+            changePercent: stock.changePercent || 0,
+            isSuspended: false,
+            volume: stock.volume || 0,
+            marketCap: stock.marketCap || 0
+          },
+          { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
+      }
+
+      stocks = await Stock.find({});
     }
 
-    const apiKey = process.env.STOCK_API_KEY;
+    const apiKey = stockService.getApiKey();
     const provider = process.env.STOCK_API_PROVIDER || 'finnhub';
     const hasApiKey = apiKey && apiKey.trim() !== '';
 
@@ -104,12 +128,13 @@ const runMarketSimulation = async () => {
 };
 
 const startSimulator = () => {
-  const apiKey = process.env.STOCK_API_KEY;
+  const apiKey = stockService.getApiKey();
   const hasApiKey = apiKey && apiKey.trim() !== '';
   // Run every 60 seconds if API key is present to respect rate limits, else 30 seconds
   const interval = hasApiKey ? 60000 : 30000;
 
   console.log(`[Market Simulator] Starting stock market price update worker (interval: ${interval / 1000}s)...`);
+  runMarketSimulation();
   const intervalId = setInterval(runMarketSimulation, interval);
   return intervalId;
 };
